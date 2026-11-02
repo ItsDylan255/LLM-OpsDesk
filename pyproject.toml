@@ -1,0 +1,20 @@
+# Womit pip das Projekt baut und installiert
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# Angaben zum Projekt
+[project]
+name = "opsdesk"
+version = "0.1.0"
+requires-python = ">=3.10"
+# Nur was der Code zur Laufzeit braucht; weitere Pakete kommen mit den Bausteinen dazu
+dependencies = ["pydantic>=2"]
+
+# Nur für Entwickler: pip install -e ".[dev]"
+[project.optional-dependencies]
+dev = ["pytest"]
+
+# src-Layout: der Code liegt in src/opsdesk
+[tool.setuptools.packages.find]
+where = ["src"]
