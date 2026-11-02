@@ -1,0 +1,15 @@
+# Environment variables
+.env
+
+# Virtual environment
+.venv/
+
+#Python autogeneiree dateien
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Logs
+logs/
+
