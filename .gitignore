@@ -4,7 +4,7 @@
 # Virtual environment
 .venv/
 
-#Python autogenerierte Dateien
+# Python: automatisch erzeugte Dateien
 __pycache__/
 *.pyc
 *.egg-info/

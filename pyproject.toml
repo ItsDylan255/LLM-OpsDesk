@@ -5,16 +5,29 @@ build-backend = "setuptools.build_meta"
 
 # Angaben zum Projekt
 [project]
-name = "opsdesk"
+name = "llmopsdesk"
 version = "0.1.0"
+description = "KI-gestützter IT-Support-Assistent mit messbaren Kosten und Qualität"
 requires-python = ">=3.10"
-# Nur was der Code zur Laufzeit braucht; weitere Pakete kommen mit den Bausteinen dazu
-dependencies = ["pydantic>=2"]
+# Nur was der Code zur Laufzeit braucht
+dependencies = [
+    "pydantic>=2",       # prüft die Antworten des Modells
+    "anthropic>=1",      # offizielles SDK für die Claude API
+    "python-dotenv>=1",  # liest den API-Key aus der Datei .env
+]
 
 # Nur für Entwickler: pip install -e ".[dev]"
 [project.optional-dependencies]
 dev = ["pytest"]
 
-# src-Layout: der Code liegt in src/opsdesk
+# Legt den Befehl "llmopsdesk" an, der main() aus cli.py aufruft
+[project.scripts]
+llmopsdesk = "llmopsdesk.cli:main"
+
+# src-Layout: der Code liegt in src/llmopsdesk
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# pytest sucht Tests nur im Ordner tests
+[tool.pytest.ini_options]
+testpaths = ["tests"]

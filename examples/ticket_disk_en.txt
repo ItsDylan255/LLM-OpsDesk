@@ -1,0 +1,4 @@
+Subject: Backups failing on db02
+
+The nightly backup job on db02 failed for the second night in a row.
+The log says "No space left on device". Nobody changed the backup config recently.

@@ -1,0 +1,5 @@
+Betreff: SSH auf web01 hängt
+
+Seit heute Morgen ca. 8:30 Uhr komme ich nicht mehr per SSH auf den Server web01.
+Die Verbindung bleibt bei "Connecting..." stehen und bricht nach etwa 30 Sekunden ab.
+Gestern Abend ging noch alles. Die Webseite auf dem Server ist im Browser erreichbar.
