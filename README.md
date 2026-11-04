@@ -24,7 +24,7 @@ Der Schwerpunkt liegt nicht auf dem API-Aufruf selbst, sondern auf allem drumher
 | 4 | Maskierung sensibler Daten, Prompt-Injection-Tests, Warnung bei gefährlichen Befehlen | ✅ (Messung mit Claude folgt) |
 | 5 | README mit Ergebnistabelle und Grenzen | geplant |
 | 6 | FastAPI + schlichte Web-Oberfläche (Deutsch/Englisch) und JSON-API | ✅ |
-| 7 | Docker | geplant |
+| 7 | Docker: schlankes Image ohne Root, Compose mit Härtung, Test in der CI | ✅ |
 | 8 | Lokales Modell über Ollama im Vergleich | geplant |
 
 ## Installation (Windows, PowerShell)
@@ -56,6 +56,25 @@ Sicherheit der Oberfläche: Antworten des Modells werden immer als **Text** ange
 Autoescaping), nie als HTML; eine Content-Security-Policy erlaubt nur Dateien vom eigenen Server;
 Tickets sind auf 5000 Zeichen begrenzt. Der Server lauscht standardmäßig nur auf `127.0.0.1` und hat
 **keine Anmeldung**. Er ist für den lokalen Gebrauch gedacht, nicht fürs offene Netz.
+
+### Docker
+
+Voraussetzung unter Windows: Docker Desktop (mit WSL2) läuft.
+
+```powershell
+docker compose up --build     # dann http://127.0.0.1:8000
+docker compose down           # stoppen
+```
+
+- Der API-Key kommt beim Start aus `.env` und steckt **nie im Image** (`.dockerignore` schließt `.env` aus).
+  Ohne `.env` startet die App trotzdem, dann nur mit dem Mock.
+- Die App läuft als normaler Benutzer (**nicht root**), mit **schreibgeschütztem Dateisystem**
+  (nur `logs` ist beschreibbar), ohne Linux-Sonderrechte (`cap_drop: ALL`, `no-new-privileges`).
+- Der Port ist nur auf `127.0.0.1` freigegeben, also nicht aus dem Netzwerk erreichbar.
+- Das Dockerfile installiert zuerst nur die Abhängigkeiten und danach den Code. Bei Code-Änderungen
+  wird so die langsame Paket-Installation nicht wiederholt (Layer-Caching).
+- Die CI baut das Image bei jedem Push, startet es und prüft `/health`, die JSON-API, das Logging
+  und dass der Container nicht als root läuft.
 
 ### Kommandozeile
 
@@ -159,7 +178,8 @@ src/llmopsdesk/
 └── web/            FastAPI-App, Jinja2-Vorlagen, CSS, Texte DE/EN (llmopsdesk-web)
 evals/              Testsatz und Label-Regeln
 kb/                 Wissensbasis: 19 Troubleshooting-Notizen
-.github/workflows/  CI: Tests mit Python 3.10 und 3.14, nur Mock
+.github/workflows/  CI: Tests mit Python 3.10 und 3.14 (nur Mock) und Docker-Test
+Dockerfile, docker-compose.yml   Container für die Web-Oberfläche (optional mit Ollama)
 ```
 
 **Erweiterbar:** Das Ticket-System ist nur die erste Aufgabe. Eine neue Aufgabe ist eine neue

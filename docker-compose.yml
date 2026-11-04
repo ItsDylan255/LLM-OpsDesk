@@ -1,0 +1,41 @@
+# Startet die Web-Oberfläche im Container:  docker compose up --build
+# Danach im Browser: http://127.0.0.1:8000
+services:
+  app:
+    build: .
+    image: llmopsdesk
+    ports:
+      # Nur von diesem Rechner erreichbar (127.0.0.1), nicht aus dem Netzwerk
+      - "127.0.0.1:8000:8000"
+    # Der API-Key kommt erst beim Start aus .env, er steckt nie im Image.
+    # required: false -> startet auch ohne .env (dann nur mit dem Mock-Provider)
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # Logs überleben einen Neustart des Containers
+      - logs:/app/logs
+    # Härtung: Dateisystem schreibgeschützt (außer logs und /tmp),
+    # keine Linux-Sonderrechte, keine Rechte-Ausweitung möglich
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  # Lokales Modell für Schritt 8. Startet nur auf Wunsch:
+  #   docker compose --profile ollama up
+  ollama:
+    image: ollama/ollama
+    profiles: ["ollama"]
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama:/root/.ollama  # heruntergeladene Modelle bleiben erhalten
+
+volumes:
+  logs:
+  ollama:

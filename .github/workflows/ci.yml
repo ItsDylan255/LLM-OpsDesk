@@ -37,3 +37,36 @@ jobs:
 
       - name: Injection-Tests (Mock prüft Maskierung und Tag-Entschärfung)
         run: llmopsdesk-injection --task ticket-v3 --strict
+
+  docker:
+    # Baut das Image und startet es genau so wie docker-compose.yml (inkl. Härtung)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code holen
+        uses: actions/checkout@v5
+
+      - name: Image bauen und Container starten
+        run: docker compose up -d --build app
+
+      - name: Warten, bis /health antwortet
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/health && exit 0
+            sleep 1
+          done
+          docker compose logs app
+          exit 1
+
+      - name: Läuft nicht als root
+        run: test "$(docker compose exec -T app id -u)" != "0"
+
+      - name: Analyse über die JSON-API (Mock) und Log trotz schreibgeschütztem Dateisystem
+        run: |
+          curl -fsS -X POST http://127.0.0.1:8000/api/analyze \
+            -H "Content-Type: application/json" \
+            -d '{"text": "SSH auf web01 hängt", "task": "ticket-v3"}' | grep '"category":"network"'
+          docker compose exec -T app test -s /app/logs/metrics.csv
+
+      - name: Aufräumen
+        if: always()
+        run: docker compose down -v
