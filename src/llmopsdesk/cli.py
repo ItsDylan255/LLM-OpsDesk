@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .metrics import log_call
+from .metrics import log_run
 from .providers import PROVIDER_NAMES, get_provider
 from .runner import run_task
 from .tasks import TASKS, get_task
@@ -40,11 +40,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Fehler beim Modellaufruf ({args.provider}): {exc}", file=sys.stderr)
         return 2
 
-    # Jeden einzelnen Aufruf loggen, auch fehlgeschlagene Versuche: die kosten auch Geld.
-    last = len(result.calls) - 1
-    for attempt, response in enumerate(result.calls):
-        valid = attempt == last and result.output is not None
-        log_call(response, task.name, task.prompt_version, attempt, valid)
+    log_run(result.calls, result.output is not None, task.name, task.prompt_version)
 
     if result.output is not None:
         print(result.output.model_dump_json(indent=2))

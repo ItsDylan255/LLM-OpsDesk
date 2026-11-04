@@ -11,18 +11,26 @@ description = "KI-gestützter IT-Support-Assistent mit messbaren Kosten und Qual
 requires-python = ">=3.10"
 # Nur was der Code zur Laufzeit braucht
 dependencies = [
-    "pydantic>=2",       # prüft die Antworten des Modells
-    "anthropic>=1",      # offizielles SDK für die Claude API
-    "python-dotenv>=1",  # liest den API-Key aus der Datei .env
+    "pydantic>=2",          # prüft die Antworten des Modells
+    "anthropic>=1",         # offizielles SDK für die Claude API
+    "python-dotenv>=1",     # liest den API-Key aus der Datei .env
+    "fastapi>=0.110",       # Web-Server und JSON-API
+    "uvicorn>=0.29",        # startet die FastAPI-App
+    "jinja2>=3",            # HTML-Vorlagen, escaped Text automatisch
+    "python-multipart>=0.0.9",  # damit FastAPI HTML-Formulare lesen kann
 ]
 
 # Nur für Entwickler: pip install -e ".[dev]"
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = [
+    "pytest",
+    "httpx",  # für FastAPIs TestClient
+]
 
-# Legt Befehle an: "llmopsdesk" ruft main() aus cli.py auf, "llmopsdesk-eval" die Auswertung
+# Legt Befehle an, z. B. ruft "llmopsdesk" die Funktion main() aus cli.py auf
 [project.scripts]
 llmopsdesk = "llmopsdesk.cli:main"
+llmopsdesk-web = "llmopsdesk.web.app:main"
 llmopsdesk-eval = "llmopsdesk.evaluation:main"
 llmopsdesk-compare = "llmopsdesk.compare:main"
 llmopsdesk-retrieval = "llmopsdesk.retrieval:main"
@@ -31,6 +39,10 @@ llmopsdesk-injection = "llmopsdesk.injection:main"
 # src-Layout: der Code liegt in src/llmopsdesk
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# HTML-Vorlagen und CSS gehören zum Paket, sind aber keine .py-Dateien
+[tool.setuptools.package-data]
+llmopsdesk = ["web/templates/*.html", "web/static/*.css"]
 
 # pytest sucht Tests nur im Ordner tests
 [tool.pytest.ini_options]

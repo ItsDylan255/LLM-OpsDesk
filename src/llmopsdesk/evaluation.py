@@ -24,7 +24,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
-from .metrics import estimate_cost, log_call
+from .metrics import estimate_cost, log_run
 from .providers import PROVIDER_NAMES, get_provider
 from .providers.base import LLMProvider, LLMResponse
 from .runner import run_task
@@ -92,10 +92,7 @@ def evaluate(task: Task, cases: list[dict], provider: LLMProvider, log: bool = T
             result.sources_correct = cited is not None and score_sources(case["relevant_kb"], cited)
         results.append(result)
         if log:
-            last = len(run.calls) - 1
-            for attempt, response in enumerate(run.calls):
-                valid = attempt == last and run.output is not None
-                log_call(response, task.name, task.prompt_version, attempt, valid)
+            log_run(run.calls, run.output is not None, task.name, task.prompt_version)
     return results
 
 

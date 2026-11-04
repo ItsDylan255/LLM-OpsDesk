@@ -65,3 +65,48 @@ def log_call(
             "valid": valid,
             "stop_reason": response.stop_reason,
         })
+
+
+def log_run(calls: list[LLMResponse], output_valid: bool, task: str, prompt_version: str,
+            log_file: Path | None = None) -> None:
+    """Loggt alle Aufrufe eines Laufs, auch fehlgeschlagene Versuche: die kosten auch Geld.
+
+    Nur der letzte Aufruf kann gültig sein, alle davor waren ja ungültig.
+    """
+    last = len(calls) - 1
+    for attempt, response in enumerate(calls):
+        valid = attempt == last and output_valid
+        log_call(response, task, prompt_version, attempt, valid, log_file or LOG_FILE)
+
+
+def read_calls(log_file: Path | None = None) -> list[dict]:
+    """Liest alle geloggten Aufrufe; leere Liste, wenn es noch keine Log-Datei gibt."""
+    path = log_file or LOG_FILE
+    if not path.exists():
+        return []
+    with path.open(newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def summarize_calls(rows: list[dict]) -> list[dict]:
+    """Gruppiert die Aufrufe nach Provider, Modell und Prompt-Version (für die Kennzahlenseite)."""
+    groups: dict[tuple, list[dict]] = {}
+    for row in rows:
+        groups.setdefault((row["provider"], row["model"], row["prompt_version"]), []).append(row)
+
+    summary = []
+    for (provider, model, version), items in sorted(groups.items()):
+        n = len(items)
+        costs = [float(r["cost_usd"]) for r in items if r["cost_usd"]]
+        summary.append({
+            "provider": provider,
+            "model": model,
+            "prompt_version": version,
+            "calls": n,
+            "valid_rate": sum(r["valid"] == "True" for r in items) / n,
+            "avg_input_tokens": sum(int(r["input_tokens"]) for r in items) / n,
+            "avg_output_tokens": sum(int(r["output_tokens"]) for r in items) / n,
+            "avg_latency_s": sum(float(r["latency_s"]) for r in items) / n,
+            "total_cost_usd": sum(costs) if len(costs) == n else None,
+        })
+    return summary

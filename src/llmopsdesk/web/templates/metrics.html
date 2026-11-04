@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t.metrics_title }}</h1>
+{% if rows %}
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Provider</th><th>{{ t.provider_label }}</th><th>{{ t.variant_label }}</th><th>{{ t.calls }}</th>
+      <th>{{ t.valid_rate }}</th><th>{{ t.avg_tokens_in }}</th><th>{{ t.avg_tokens_out }}</th>
+      <th>{{ t.avg_latency }}</th><th>{{ t.total_cost }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{{ row.provider }}</td><td>{{ row.model }}</td><td>{{ row.prompt_version }}</td><td>{{ row.calls }}</td>
+      <td>{{ "%.0f"|format(row.valid_rate * 100) }} %</td>
+      <td>{{ "%.0f"|format(row.avg_input_tokens) }}</td><td>{{ "%.0f"|format(row.avg_output_tokens) }}</td>
+      <td>{{ "%.2f"|format(row.avg_latency_s) }} s</td>
+      <td>{% if row.total_cost_usd is none %}{{ t.unknown }}{% else %}${{ "%.4f"|format(row.total_cost_usd) }}{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p>{{ t.metrics_empty }}</p>
+{% endif %}
+
+<h1>{{ t.eval_title }}</h1>
+{% if eval_rows %}
+<div class="table-wrap">
+<table>
+  <thead><tr>{% for name in eval_header %}<th>{{ name }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in eval_rows %}
+    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p>{{ t.eval_empty }}</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t.note_title }}: {{ note.title }}</h1>
+<div class="card">
+  <p class="small">{{ note.keywords }}</p>
+  {# Als vorformatierter Text angezeigt, nicht als HTML: Markdown wird bewusst nicht gerendert. #}
+  <pre>{{ note.body }}</pre>
+</div>
+<p><a href="/">{{ t.back }}</a></p>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t.result_title }}</h1>
+
+{% if call_failed %}
+  <p class="alert error">{{ t.error_call }}: {{ error }}</p>
+{% elif analysis is none %}
+  <p class="alert error">{{ t.error_invalid }}</p>
+  <pre>{{ error }}</pre>
+{% else %}
+  {% for warning in warnings %}
+    <p class="alert error">{{ t.warning_dangerous }} ({{ warning }})</p>
+  {% endfor %}
+  {% if analysis.needs_more_info %}
+    <p class="alert info">{{ t.needs_more_info }}</p>
+  {% endif %}
+
+  <div class="card">
+    <p class="badges">
+      <span class="badge">{{ t.category }}: {{ t.categories.get(analysis.category, analysis.category) }}</span>
+      <span class="badge prio-{{ analysis.priority }}">{{ t.priority }}: {{ t.priorities.get(analysis.priority, analysis.priority) }}</span>
+    </p>
+
+    <h2>{{ t.summary }}</h2>
+    <p>{{ analysis.summary }}</p>
+
+    <h2>{{ t.possible_causes }}</h2>
+    <ul>{% for item in analysis.possible_causes %}<li>{{ item }}</li>{% endfor %}</ul>
+
+    <h2>{{ t.next_steps }}</h2>
+    <ol>{% for item in analysis.next_steps %}<li>{{ item }}</li>{% endfor %}</ol>
+
+    <h2>{{ t.sources }}</h2>
+    {% if analysis.sources %}
+      <ul>{% for source in analysis.sources %}<li><a href="/kb/{{ source | urlencode }}">{{ source }}</a></li>{% endfor %}</ul>
+    {% else %}
+      <p>{{ t.no_sources }}</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if usage %}
+<div class="card small">
+  <h2>{{ t.usage }}</h2>
+  <p>
+    {{ usage.model }} · {{ t.calls }}: {{ usage.calls }} ·
+    {{ t.tokens }}: {{ usage.input_tokens }}/{{ usage.output_tokens }} ·
+    {{ t.cost }}: {% if usage.cost_usd is none %}{{ t.unknown }}{% else %}${{ "%.5f"|format(usage.cost_usd) }}{% endif %} ·
+    {{ t.latency }}: {{ usage.latency_s }} s ·
+    {{ t.masked }}: {{ masked_count }}
+  </p>
+</div>
+{% endif %}
+
+<p><a href="/">{{ t.new_analysis }}</a></p>
+{% endblock %}

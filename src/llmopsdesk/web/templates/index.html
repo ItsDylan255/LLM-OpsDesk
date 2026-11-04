@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="post" action="/analyze" class="card">
+  <label for="ticket">{{ t.ticket_label }}</label>
+  <textarea id="ticket" name="ticket" rows="8" maxlength="{{ max_chars }}" required
+            placeholder="{{ t.ticket_placeholder }}">{{ ticket }}</textarea>
+
+  <div class="row">
+    <div>
+      <label for="provider">{{ t.provider_label }}</label>
+      <select id="provider" name="provider">
+        <option value="mock" {% if default_provider == "mock" %}selected{% endif %}>{{ t.provider_mock }}</option>
+        <option value="claude" {% if not claude_available %}disabled{% endif %}>
+          {% if claude_available %}{{ t.provider_claude }}{% else %}{{ t.provider_claude_missing }}{% endif %}
+        </option>
+      </select>
+    </div>
+    <div>
+      <label for="variant">{{ t.variant_label }}</label>
+      <select id="variant" name="variant">
+        {% for name in variants %}
+        <option value="{{ name }}" {% if name == default_variant %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <label class="check"><input type="checkbox" name="mask" value="true" checked> {{ t.mask_label }}</label>
+  <button type="submit">{{ t.submit }}</button>
+</form>
+{% endblock %}

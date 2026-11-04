@@ -23,7 +23,7 @@ Der Schwerpunkt liegt nicht auf dem API-Aufruf selbst, sondern auf allem drumher
 | 3 | Wissensbasis + Retrieval (RAG) mit Quellenangaben, Prompt-Varianten v0-v5, Vergleichstabelle | ✅ (Messung mit Claude folgt) |
 | 4 | Maskierung sensibler Daten, Prompt-Injection-Tests, Warnung bei gefährlichen Befehlen | ✅ (Messung mit Claude folgt) |
 | 5 | README mit Ergebnistabelle und Grenzen | geplant |
-| 6 | FastAPI + schlichte Web-Oberfläche | geplant |
+| 6 | FastAPI + schlichte Web-Oberfläche (Deutsch/Englisch) und JSON-API | ✅ |
 | 7 | Docker | geplant |
 | 8 | Lokales Modell über Ollama im Vergleich | geplant |
 
@@ -37,6 +37,27 @@ Copy-Item .env.example .env   # danach den API-Key in .env eintragen
 ```
 
 ## Benutzung
+
+### Web-Oberfläche
+
+```powershell
+llmopsdesk-web     # dann http://127.0.0.1:8000 im Browser öffnen
+```
+
+- **Analyse:** Ticket eingeben, Modell und Prompt-Variante wählen, Maskierung an/aus.
+- **Kennzahlen:** Aufrufe, gültige Antworten, Tokens, Kosten und Dauer je Modell und Variante,
+  dazu die letzten gespeicherten Auswertungen.
+- **Quellen** sind verlinkt und zeigen die Notiz aus der Wissensbasis.
+- Umschalten zwischen **Deutsch und Englisch** oben rechts.
+- **JSON-API** für andere Programme: `POST /api/analyze` mit `{"text": "...", "task": "ticket-v3", "provider": "mock"}`.
+  Die automatische API-Dokumentation steht unter `http://127.0.0.1:8000/docs`.
+
+Sicherheit der Oberfläche: Antworten des Modells werden immer als **Text** angezeigt (Jinja2 mit
+Autoescaping), nie als HTML; eine Content-Security-Policy erlaubt nur Dateien vom eigenen Server;
+Tickets sind auf 5000 Zeichen begrenzt. Der Server lauscht standardmäßig nur auf `127.0.0.1` und hat
+**keine Anmeldung**. Er ist für den lokalen Gebrauch gedacht, nicht fürs offene Netz.
+
+### Kommandozeile
 
 ```powershell
 # Ohne API-Key und ohne Kosten (feste Mock-Antwort):
@@ -134,7 +155,8 @@ src/llmopsdesk/
 ├── evaluation.py   Testsatz auswerten (llmopsdesk-eval)
 ├── compare.py      Vergleichstabelle der Varianten (llmopsdesk-compare)
 ├── metrics.py      Tokens, Kosten, Latenz in CSV
-└── cli.py          Kommandozeile
+├── cli.py          Kommandozeile
+└── web/            FastAPI-App, Jinja2-Vorlagen, CSS, Texte DE/EN (llmopsdesk-web)
 evals/              Testsatz und Label-Regeln
 kb/                 Wissensbasis: 19 Troubleshooting-Notizen
 .github/workflows/  CI: Tests mit Python 3.10 und 3.14, nur Mock

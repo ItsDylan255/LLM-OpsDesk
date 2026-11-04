@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t.title }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <a class="brand" href="/">{{ t.title }}</a>
+    <nav>
+      <a href="/">{{ t.nav_analyze }}</a>
+      <a href="/metrics">{{ t.nav_metrics }}</a>
+      <span class="lang">
+        <a href="{{ lang_base }}?lang=de" {% if lang == "de" %}aria-current="true"{% endif %}>DE</a>
+        <a href="{{ lang_base }}?lang=en" {% if lang == "en" %}aria-current="true"{% endif %}>EN</a>
+      </span>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

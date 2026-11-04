@@ -16,3 +16,6 @@ logs/
 
 # Auswertungen mit dem Mock sind nur Funktionstests, keine echten Ergebnisse
 evals/results/*_mock.json
+
+# Lokale Einstellungen für KI-Werkzeuge (Claude Code), nicht Teil des Projekts
+.claude/
