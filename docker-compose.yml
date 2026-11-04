@@ -26,16 +26,5 @@ services:
       - no-new-privileges:true
     restart: unless-stopped
 
-  # Lokales Modell für Schritt 8. Startet nur auf Wunsch:
-  #   docker compose --profile ollama up
-  ollama:
-    image: ollama/ollama
-    profiles: ["ollama"]
-    ports:
-      - "127.0.0.1:11434:11434"
-    volumes:
-      - ollama:/root/.ollama  # heruntergeladene Modelle bleiben erhalten
-
 volumes:
   logs:
-  ollama:

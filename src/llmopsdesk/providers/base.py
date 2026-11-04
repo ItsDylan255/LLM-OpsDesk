@@ -1,7 +1,7 @@
 """Gemeinsame Schnittstelle für alle Modell-Anbieter.
 
 Der Rest des Programms kennt nur diese Datei. Dadurch kann man den Anbieter
-austauschen (Claude, Mock, später Ollama), ohne anderen Code zu ändern.
+austauschen (Claude, Mock), ohne anderen Code zu ändern.
 """
 
 from dataclasses import dataclass

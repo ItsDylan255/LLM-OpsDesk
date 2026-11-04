@@ -1,7 +1,7 @@
 """Wählt anhand eines Namens den passenden Anbieter aus.
 
-Neuen Anbieter hinzufügen (z. B. Ollama):
-1. Datei providers/ollama.py mit einer Klasse, die complete() hat
+Neuen Anbieter hinzufügen (z. B. ein anderes Sprachmodell):
+1. Datei providers/<name>.py mit einer Klasse, die complete() hat
 2. hier in get_provider() einen Fall ergänzen
 """
 

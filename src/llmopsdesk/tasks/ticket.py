@@ -139,7 +139,7 @@ def make_user_prompt_builder(max_chars: int | None = None):
 
     def build_user_prompt(ticket_text: str, documents: list[Document]) -> str:
         # Die Tags trennen Daten (Ticket) klar von unseren Anweisungen. Das ist ein
-        # erster Schutz gegen Prompt-Injection, aber kein vollständiger (siehe Schritt 4).
+        # erster Schutz gegen Prompt-Injection, aber kein vollständiger (gemessen mit llmopsdesk-injection).
         kb = format_documents(documents, max_chars) if documents else ""
         return f"{kb}<ticket>\n{ticket_text.strip()}\n</ticket>"
 

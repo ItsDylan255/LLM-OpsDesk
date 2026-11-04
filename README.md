@@ -14,19 +14,6 @@ Der Schwerpunkt liegt nicht auf dem API-Aufruf selbst, sondern auf allem drumher
 > Anthropic) entwickelt ("vibe coding"). Architektur und Entscheidungen wurden gemeinsam
 > erarbeitet; der Code ist bewusst einfach gehalten und ausführlich kommentiert.
 
-## Status
-
-| Schritt | Inhalt | Stand |
-|---|---|---|
-| 1 | Kern: Provider (Claude, Mock), Aufgaben-Konzept, Validierung, Reparaturversuch, Metriken, CLI | ✅ |
-| 2 | Testsatz (30 Tickets, Deutsch/Englisch), Auswertung, CI | ✅ (Baseline mit Claude folgt, sobald ein API-Key da ist) |
-| 3 | Wissensbasis + Retrieval (RAG) mit Quellenangaben, Prompt-Varianten v0-v5, Vergleichstabelle | ✅ (Messung mit Claude folgt) |
-| 4 | Maskierung sensibler Daten, Prompt-Injection-Tests, Warnung bei gefährlichen Befehlen | ✅ (Messung mit Claude folgt) |
-| 5 | README mit Ergebnistabelle und Grenzen | geplant |
-| 6 | FastAPI + schlichte Web-Oberfläche (Deutsch/Englisch) und JSON-API | ✅ |
-| 7 | Docker: schlankes Image ohne Root, Compose mit Härtung, Test in der CI | ✅ |
-| 8 | Lokales Modell über Ollama im Vergleich | geplant |
-
 ## Installation (Windows, PowerShell)
 
 ```powershell
@@ -179,7 +166,7 @@ src/llmopsdesk/
 evals/              Testsatz und Label-Regeln
 kb/                 Wissensbasis: 19 Troubleshooting-Notizen
 .github/workflows/  CI: Tests mit Python 3.10 und 3.14 (nur Mock) und Docker-Test
-Dockerfile, docker-compose.yml   Container für die Web-Oberfläche (optional mit Ollama)
+Dockerfile, docker-compose.yml   Container für die Web-Oberfläche
 ```
 
 **Erweiterbar:** Das Ticket-System ist nur die erste Aufgabe. Eine neue Aufgabe ist eine neue
@@ -227,8 +214,6 @@ vollständiger Domainname aussehen.
 - **Auftragsverarbeitung:** Wer echte Tickets an einen Cloud-Anbieter schickt, gibt personenbezogene
   Daten an einen Dienstleister weiter. Im echten Einsatz braucht es dafür einen Vertrag zur
   Auftragsverarbeitung (Art. 28 DSGVO) und eine Prüfung, wo die Daten verarbeitet werden.
-- **Lokale Alternative:** Mit einem lokalen Modell über Ollama (Schritt 8) verlassen die Daten den
-  Rechner gar nicht.
 - **Logs:** `logs/metrics.csv` enthält nur Zahlen (Tokens, Kosten, Dauer), keine Ticket-Inhalte.
 - **Geheimnisse:** Der API-Key steht nur in `.env`, die per `.gitignore` nie ins Repo kommt.
 
@@ -238,4 +223,4 @@ Hinweis: Dieser Abschnitt beschreibt die technischen Maßnahmen des Projekts und
 
 Langfristig soll aus dem Projekt ein persönlicher Assistent für viele Aufgaben werden:
 gleiche Infrastruktur (Provider, Validierung, Messung, Maskierung), verschiedene Aufgaben
-und Wissensbasen, optional komplett lokal über Ollama.
+und Wissensbasen.
