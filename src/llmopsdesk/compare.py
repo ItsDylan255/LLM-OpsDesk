@@ -22,7 +22,7 @@ def load_latest(results_dir: Path, include_mock: bool) -> list[dict]:
         meta = data["meta"]
         if meta["provider"] == "mock" and not include_mock:
             continue
-        latest[(meta["task"], meta["provider"], meta["model"])] = data
+        latest[(meta["task"], meta["provider"], meta["model"], meta.get("mask", True))] = data
     return sorted(latest.values(), key=lambda d: (d["meta"]["model"], d["meta"]["task"]))
 
 
@@ -44,7 +44,7 @@ def row_for(data: dict) -> list[str]:
     cost = avg(lambda s: s["total_cost_usd"])
     cost_per_ticket = None if cost is None else cost / meta["n_cases"]
     return [
-        meta["task"],
+        meta["task"] + ("" if meta.get("mask", True) else " (ohne Maskierung)"),
         meta["model"],
         str(meta["repeat"]),
         pct(avg(lambda s: s["valid_rate"])),

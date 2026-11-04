@@ -21,7 +21,7 @@ Der Schwerpunkt liegt nicht auf dem API-Aufruf selbst, sondern auf allem drumher
 | 1 | Kern: Provider (Claude, Mock), Aufgaben-Konzept, Validierung, Reparaturversuch, Metriken, CLI | ✅ |
 | 2 | Testsatz (30 Tickets, Deutsch/Englisch), Auswertung, CI | ✅ (Baseline mit Claude folgt, sobald ein API-Key da ist) |
 | 3 | Wissensbasis + Retrieval (RAG) mit Quellenangaben, Prompt-Varianten v0-v5, Vergleichstabelle | ✅ (Messung mit Claude folgt) |
-| 4 | Maskierung sensibler Daten, Prompt-Injection-Tests | geplant |
+| 4 | Maskierung sensibler Daten, Prompt-Injection-Tests, Warnung bei gefährlichen Befehlen | ✅ (Messung mit Claude folgt) |
 | 5 | README mit Ergebnistabelle und Grenzen | geplant |
 | 6 | FastAPI + schlichte Web-Oberfläche | geplant |
 | 7 | Docker | geplant |
@@ -127,6 +127,9 @@ src/llmopsdesk/
 │   ├── base.py     Task: Prompt + Antwortformat
 │   └── ticket.py   Aufgabe "Ticket analysieren" in den Varianten v0-v5
 ├── runner.py       führt eine Aufgabe aus, prüft und repariert die Antwort
+├── masking.py      sensible Daten vor dem API-Aufruf maskieren
+├── safety.py       Tags entschärfen, gefährliche Befehle erkennen
+├── injection.py    Prompt-Injection-Tests (llmopsdesk-injection)
 ├── retrieval.py    Suche in der Wissensbasis (BM25), llmopsdesk-retrieval
 ├── evaluation.py   Testsatz auswerten (llmopsdesk-eval)
 ├── compare.py      Vergleichstabelle der Varianten (llmopsdesk-compare)
@@ -141,13 +144,53 @@ kb/                 Wissensbasis: 19 Troubleshooting-Notizen
 Datei in `tasks/` (Prompt + Pydantic-Modell) plus ein Eintrag in `tasks/__init__.py`.
 Ein neuer Anbieter ist eine neue Datei in `providers/` mit einer Methode `complete()`.
 
-## Sicherheit und Datenschutz
+## Sicherheit
 
-- Der API-Key steht nur in `.env`, die per `.gitignore` nie ins Repo kommt.
-- Der Ticket-Text wird als **Daten** behandelt (zwischen `<ticket>`-Tags, mit ausdrücklicher Anweisung,
-  darin enthaltene Befehle nicht zu befolgen). Wie gut das wirkt, wird in Schritt 4 gemessen.
-- Das Programm führt **nie** Befehle aus; `next_steps` sind nur Vorschläge für Menschen.
-- Alle Beispieltickets sind erfunden.
+**Maskierung** ([`masking.py`](src/llmopsdesk/masking.py)): Vor jedem Aufruf eines Cloud-Anbieters
+werden IP- und MAC-Adressen, Hostnamen, E-Mail-Adressen, Benutzernamen, Passwörter und API-Keys
+durch Platzhalter ersetzt (`web01` → `[HOST_1]`). Gleiche Werte bekommen gleiche Platzhalter.
+Die Zuordnung bleibt lokal; in der Antwort werden die Originale wieder eingesetzt, **außer Geheimnissen**.
+Mit `--no-mask` lässt sich messen, ob die Maskierung die Qualität senkt (`llmopsdesk-eval --no-mask`).
+
+**Prompt-Injection** ([`safety.py`](src/llmopsdesk/safety.py)), mehrere einfache Schichten:
+1. Ticket und Notizen stehen in Tags und sind im System-Prompt ausdrücklich als *Daten* markiert.
+2. Tags im Eingabetext werden entschärft (`</ticket>` → `[/ticket]`), damit ein Ticket nicht aus dem
+   Datenbereich "ausbrechen" oder eine gefälschte Notiz einschleusen kann.
+3. Die Antwort muss das feste JSON-Schema erfüllen; freie Antworten wie "PWNED" fallen durch.
+4. Antworten werden auf zerstörerische Befehle geprüft (`rm -rf`, `mkfs`, `curl ... | bash` ...) und
+   dann mit Warnung angezeigt. Das Programm führt **nie** Befehle aus.
+
+[`evals/injection.jsonl`](evals/injection.jsonl) enthält 12 Angriffe (Deutsch und Englisch) in sechs
+Gruppen: Priorität erzwingen, Ausgabe kapern, aus Tags ausbrechen, System-Prompt auslesen,
+gefährliche Befehle unterschieben, Geheimnisse senden.
+
+```powershell
+llmopsdesk-injection --provider claude --task ticket-v3
+```
+
+Mit dem Mock (auch in der CI) sind nur die Prüfungen aussagekräftig, die *unseren* Code testen:
+Verlässt ein Passwort, eine IP oder ein ausgebrochener Tag den Rechner? Alle anderen Prüfungen messen
+das Modell. **Prompt-Injection lässt sich nicht vollständig verhindern**, nur erschweren und messen.
+
+**Grenzen der Maskierung:** Sie arbeitet mit festen Mustern (Regex). Personennamen im Fließtext
+("Frau Müller kann nicht drucken") werden nicht erkannt; dafür bräuchte man Named Entity Recognition.
+Hostnamen werden nur erkannt, wenn sie wie `web01` (Buchstaben + 2-3 Ziffern) oder wie ein
+vollständiger Domainname aussehen.
+
+## Datenschutz (DSGVO)
+
+- **Nur erfundene Daten:** Alle Tickets, Hostnamen und Personen in diesem Repo sind erfunden.
+- **Datenminimierung (Art. 5 DSGVO):** Es geht nur der Ticket-Text an den Anbieter, und zwar maskiert.
+  Die Wissensbasis-Suche läuft lokal.
+- **Auftragsverarbeitung:** Wer echte Tickets an einen Cloud-Anbieter schickt, gibt personenbezogene
+  Daten an einen Dienstleister weiter. Im echten Einsatz braucht es dafür einen Vertrag zur
+  Auftragsverarbeitung (Art. 28 DSGVO) und eine Prüfung, wo die Daten verarbeitet werden.
+- **Lokale Alternative:** Mit einem lokalen Modell über Ollama (Schritt 8) verlassen die Daten den
+  Rechner gar nicht.
+- **Logs:** `logs/metrics.csv` enthält nur Zahlen (Tokens, Kosten, Dauer), keine Ticket-Inhalte.
+- **Geheimnisse:** Der API-Key steht nur in `.env`, die per `.gitignore` nie ins Repo kommt.
+
+Hinweis: Dieser Abschnitt beschreibt die technischen Maßnahmen des Projekts und ist keine Rechtsberatung.
 
 ## Ausblick
 

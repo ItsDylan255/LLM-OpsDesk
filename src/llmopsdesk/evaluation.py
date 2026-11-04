@@ -78,10 +78,11 @@ def score_sources(relevant: list[str], ids: list[str]) -> bool:
     return not ids
 
 
-def evaluate(task: Task, cases: list[dict], provider: LLMProvider, log: bool = True) -> list[CaseResult]:
+def evaluate(task: Task, cases: list[dict], provider: LLMProvider, log: bool = True,
+             mask: bool = True) -> list[CaseResult]:
     results = []
     for case in cases:
-        run = run_task(task, case["text"], provider)
+        run = run_task(task, case["text"], provider, mask=mask)
         exact, within_one = score_case(case["expected"], run.output, task.ordinal_fields)
         result = CaseResult(case["id"], case.get("lang", "?"), run.output, run.error,
                             exact, within_one, run.calls, run.context_ids)
@@ -163,7 +164,8 @@ def format_summary(summary: dict) -> str:
 def save_results(meta: dict, summaries: list[dict], runs: list[list[CaseResult]]) -> Path:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    path = RESULTS_DIR / f"{stamp}_{meta['task']}_{meta['provider']}.json"
+    suffix = "" if meta.get("mask", True) else "_nomask"
+    path = RESULTS_DIR / f"{stamp}_{meta['task']}{suffix}_{meta['provider']}.json"
     details = [
         {"run": i, "id": r.case_id, "lang": r.lang, "exact": r.exact, "within_one": r.within_one,
          "context_ids": r.context_ids, "error": r.error, "output": r.output.model_dump() if r.output is not None else None}
@@ -186,6 +188,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repeat", type=int, default=1, help="Durchläufe (Modelle antworten nicht immer gleich)")
     parser.add_argument("--limit", type=int, default=None, help="nur die ersten N Fälle (zum Ausprobieren)")
     parser.add_argument("--no-save", action="store_true", help="Ergebnis nicht unter evals/results speichern")
+    parser.add_argument("--no-mask", action="store_true",
+                        help="ohne Maskierung messen (um zu sehen, ob Maskierung die Qualität senkt)")
     args = parser.parse_args(argv)
 
     # "ticket" ist nur ein zweiter Name für eine der Varianten, darum bei "all" weglassen.
@@ -206,7 +210,7 @@ def run_evaluation(task: Task, cases: list[dict], provider: LLMProvider, args: a
 
     runs, summaries = [], []
     for i in range(args.repeat):
-        results = evaluate(task, cases, provider)
+        results = evaluate(task, cases, provider, mask=not args.no_mask)
         summary = summarize(results)
         runs.append(results)
         summaries.append(summary)
@@ -225,6 +229,7 @@ def run_evaluation(task: Task, cases: list[dict], provider: LLMProvider, args: a
             "task": task.name, "prompt_version": task.prompt_version, "provider": provider.name,
             "model": first_calls[0].model if first_calls else "", "cases_file": str(args.cases),
             "n_cases": len(cases), "reviewed_cases": reviewed, "repeat": args.repeat,
+            "mask": not args.no_mask,
         }
         print(f"\nGespeichert: {save_results(meta, summaries, runs)}")
 

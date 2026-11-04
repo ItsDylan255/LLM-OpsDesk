@@ -34,3 +34,6 @@ jobs:
 
       - name: Suche in der Wissensbasis messen (ohne Modell, kostenlos)
         run: llmopsdesk-retrieval
+
+      - name: Injection-Tests (Mock prüft Maskierung und Tag-Entschärfung)
+        run: llmopsdesk-injection --task ticket-v3 --strict

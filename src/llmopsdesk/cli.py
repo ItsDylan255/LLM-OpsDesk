@@ -18,6 +18,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--task", choices=list(TASKS), default="ticket", help="welche Aufgabe (Standard: ticket)")
     parser.add_argument("--provider", choices=PROVIDER_NAMES, default="mock",
                         help="welches Modell (Standard: mock, kostet nichts)")
+    parser.add_argument("--no-mask", action="store_true",
+                        help="sensible Daten NICHT maskieren (nur für lokale Modelle sinnvoll)")
     return parser
 
 
@@ -33,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         provider = get_provider(args.provider)
-        result = run_task(task, input_text, provider)
+        result = run_task(task, input_text, provider, mask=not args.no_mask)
     except Exception as exc:  # oberste Ebene: verständliche Meldung statt langem Traceback
         print(f"Fehler beim Modellaufruf ({args.provider}): {exc}", file=sys.stderr)
         return 2
@@ -49,12 +51,16 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"Ungültige Modellantwort nach {len(result.calls)} Versuch(en): {result.error}", file=sys.stderr)
 
+    for warning in result.warnings:
+        print(f"WARNUNG: Die Antwort enthält einen gefährlichen Befehl ({warning}). Nicht blind ausführen!",
+              file=sys.stderr)
+
     total_in = sum(c.input_tokens for c in result.calls)
     total_out = sum(c.output_tokens for c in result.calls)
     total_time = sum(c.latency_s for c in result.calls)
     print(
         f"\n[{result.calls[-1].model}] Aufrufe={len(result.calls)} "
-        f"Tokens in={total_in} out={total_out} Zeit={total_time:.2f}s",
+        f"Tokens in={total_in} out={total_out} Zeit={total_time:.2f}s maskiert={result.masked_count}",
         file=sys.stderr,
     )
     return 0 if result.output is not None else 1
