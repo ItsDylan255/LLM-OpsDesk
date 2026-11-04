@@ -20,9 +20,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest"]
 
-# Legt den Befehl "llmopsdesk" an, der main() aus cli.py aufruft
+# Legt Befehle an: "llmopsdesk" ruft main() aus cli.py auf, "llmopsdesk-eval" die Auswertung
 [project.scripts]
 llmopsdesk = "llmopsdesk.cli:main"
+llmopsdesk-eval = "llmopsdesk.evaluation:main"
 
 # src-Layout: der Code liegt in src/llmopsdesk
 [tool.setuptools.packages.find]

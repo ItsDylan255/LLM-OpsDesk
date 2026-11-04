@@ -1,5 +1,7 @@
 # LLM OpsDesk
 
+[![CI](https://github.com/ItsDylan255/LLM-OpsDesk/actions/workflows/ci.yml/badge.svg)](https://github.com/ItsDylan255/LLM-OpsDesk/actions/workflows/ci.yml)
+
 KI-gestützter IT-Support-Assistent: Er nimmt ein IT-Ticket als Text, lässt es von einem
 Sprachmodell analysieren und liefert eine **geprüfte, strukturierte Antwort** (Kategorie,
 Priorität, Zusammenfassung, mögliche Ursachen, nächste Schritte).
@@ -17,7 +19,7 @@ Der Schwerpunkt liegt nicht auf dem API-Aufruf selbst, sondern auf allem drumher
 | Schritt | Inhalt | Stand |
 |---|---|---|
 | 1 | Kern: Provider (Claude, Mock), Aufgaben-Konzept, Validierung, Reparaturversuch, Metriken, CLI | ✅ |
-| 2 | Testsatz (30 Tickets, Deutsch/Englisch), Auswertungsskript, Baseline, CI | geplant |
+| 2 | Testsatz (30 Tickets, Deutsch/Englisch), Auswertung, CI | ✅ (Baseline mit Claude folgt, sobald ein API-Key da ist) |
 | 3 | Wissensbasis + Retrieval (RAG) mit Quellenangaben, Prompt-Varianten im Vergleich | geplant |
 | 4 | Maskierung sensibler Daten, Prompt-Injection-Tests | geplant |
 | 5 | README mit Ergebnistabelle und Grenzen | geplant |
@@ -52,6 +54,28 @@ Tests:
 python -m pytest
 ```
 
+## Evaluation
+
+Der Testsatz [`evals/tickets.jsonl`](evals/tickets.jsonl) enthält 30 erfundene Tickets
+(15 Deutsch, 15 Englisch, alle sechs Kategorien, drei absichtlich unklare Tickets).
+Die Labels folgen festen Regeln: [`evals/LABELING.md`](evals/LABELING.md).
+
+```powershell
+llmopsdesk-eval --provider mock              # Funktionstest, kostet nichts
+llmopsdesk-eval --provider claude --repeat 3 # echte Messung, 3 Durchläufe wegen Streuung
+```
+
+Gemessen werden: Anteil gültiger Antworten, Trefferquote je Feld (Kategorie, Priorität,
+`needs_more_info`), Priorität "höchstens eine Stufe daneben", alles auch getrennt nach
+Sprache, dazu Tokens, Kosten und Dauer pro Ticket. Ergebnisse landen in `evals/results/`.
+
+**Vergleichswert:** Der Mock antwortet immer "network / medium" und erreicht damit 20 %
+bei der Kategorie. Jedes echte Modell muss deutlich besser sein als diese "dumme" Konstante.
+
+**Grenzen:** 30 Tickets sind wenig, ein Ticket entspricht 3,3 Prozentpunkten. Kleine
+Unterschiede zwischen Varianten können Zufall sein, deshalb mehrere Durchläufe (`--repeat`).
+Die Tickets wurden mit KI-Hilfe geschrieben und werden von Hand geprüft (Feld `reviewed`).
+
 ## Aufbau
 
 ```
@@ -64,8 +88,11 @@ src/llmopsdesk/
 │   ├── base.py     Task: Prompt + Antwortformat
 │   └── ticket.py   Aufgabe "Ticket analysieren"
 ├── runner.py       führt eine Aufgabe aus, prüft und repariert die Antwort
+├── evaluation.py   Testsatz auswerten (llmopsdesk-eval)
 ├── metrics.py      Tokens, Kosten, Latenz in CSV
 └── cli.py          Kommandozeile
+evals/              Testsatz und Label-Regeln
+.github/workflows/  CI: Tests mit Python 3.10 und 3.14, nur Mock
 ```
 
 **Erweiterbar:** Das Ticket-System ist nur die erste Aufgabe. Eine neue Aufgabe ist eine neue

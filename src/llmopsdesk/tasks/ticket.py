@@ -58,4 +58,5 @@ TICKET_TASK = Task(
     system_prompt=SYSTEM_PROMPT,
     build_user_prompt=build_user_prompt,
     output_model=TicketAnalysis,
+    ordinal_fields={"priority": ["low", "medium", "high", "critical"]},
 )

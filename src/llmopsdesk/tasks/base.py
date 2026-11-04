@@ -10,7 +10,7 @@ zusammenfassen) ist einfach eine neue Datei in tasks/ plus ein Eintrag in
 tasks/__init__.py. Provider, Runner und Metriken bleiben unverändert.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 from pydantic import BaseModel
@@ -24,3 +24,6 @@ class Task:
     build_user_prompt: Callable[[str], str]
     output_model: type[BaseModel]
     max_tokens: int = 2000  # Obergrenze für die Antwortlänge (inklusive Nachdenken des Modells)
+    # Felder mit geordneten Werten, z. B. Priorität low < medium < high < critical.
+    # Die Auswertung zählt dort zusätzlich "höchstens eine Stufe daneben".
+    ordinal_fields: dict[str, list[str]] = field(default_factory=dict)

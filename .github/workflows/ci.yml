@@ -1,0 +1,33 @@
+# CI: Bei jedem Push und Pull Request prüft GitHub automatisch, ob alles noch funktioniert.
+# Es wird nur der Mock-Provider benutzt: kein API-Key nötig, keine Kosten.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Älteste unterstützte Version (siehe requires-python) und die aktuelle
+        python-version: ["3.10", "3.14"]
+
+    steps:
+      - name: Code holen
+        uses: actions/checkout@v4
+
+      - name: Python ${{ matrix.python-version }} einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Projekt installieren
+        run: pip install -e ".[dev]"
+
+      - name: Tests
+        run: python -m pytest -v
+
+      - name: Auswertung mit dem Mock (prüft, dass die ganze Kette läuft)
+        run: llmopsdesk-eval --provider mock --no-save

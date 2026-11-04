@@ -13,3 +13,6 @@ __pycache__/
 # Logs
 logs/
 
+
+# Auswertungen mit dem Mock sind nur Funktionstests, keine echten Ergebnisse
+evals/results/*_mock.json
