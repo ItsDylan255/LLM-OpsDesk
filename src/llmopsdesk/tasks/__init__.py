@@ -1,11 +1,14 @@
-"""Verzeichnis aller Aufgaben. Neue Aufgabe = neue Datei + ein Eintrag in TASKS."""
+"""Verzeichnis aller Aufgaben. Neue Aufgabe = neue Datei + Einträge in TASKS."""
+
+from dataclasses import replace
 
 from .base import Task
-from .ticket import TICKET_TASK
+from .ticket import DEFAULT_VERSION, TICKET_VARIANTS
 
-TASKS: dict[str, Task] = {
-    TICKET_TASK.name: TICKET_TASK,
-}
+TASKS: dict[str, Task] = {task.name: task for task in TICKET_VARIANTS}
+
+# "ticket" ist der bequeme Name für die aktuelle Standard-Variante.
+TASKS["ticket"] = replace(TASKS[f"ticket-{DEFAULT_VERSION}"], name="ticket")
 
 
 def get_task(name: str) -> Task:

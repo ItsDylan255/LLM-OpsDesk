@@ -7,6 +7,9 @@ Kennzahlen (vorher festgelegt, damit man nicht nachträglich schönrechnet):
 - valid_rate:      Anteil Antworten, die nach höchstens einer Reparatur gültig sind
 - accuracy[feld]:  Anteil Tickets, bei denen das Feld exakt dem Label entspricht
 - within_one[feld]: bei geordneten Feldern (Priorität): höchstens eine Stufe daneben
+- nur bei Varianten mit Wissensbasis (Testfall hat "relevant_kb"):
+  - retrieval_hit:   passende Notiz wurde mitgeschickt (bzw. keine, wenn es keine passende gibt)
+  - sources_correct: das Modell nennt die passende Notiz (bzw. keine) als Quelle
 - Tokens, Kosten und Dauer pro Ticket
 Alles wird zusätzlich getrennt nach Sprache (de/en) ausgegeben.
 """
@@ -40,6 +43,9 @@ class CaseResult:
     exact: dict[str, bool]        # Feld -> stimmt exakt?
     within_one: dict[str, bool]   # geordnetes Feld -> höchstens eine Stufe daneben?
     calls: list[LLMResponse] = field(default_factory=list)
+    context_ids: list[str] = field(default_factory=list)
+    retrieval_hit: bool | None = None    # None = ohne Wissensbasis, nicht bewertet
+    sources_correct: bool | None = None
 
 
 def load_cases(path: Path) -> list[dict]:
@@ -65,13 +71,25 @@ def score_case(expected: dict, output: BaseModel | None, ordinal_fields: dict[st
     return exact, within_one
 
 
+def score_sources(relevant: list[str], ids: list[str]) -> bool:
+    """Richtig, wenn eine passende Notiz dabei ist, oder wenn es keine gibt und keine genannt wird."""
+    if relevant:
+        return any(note in ids for note in relevant)
+    return not ids
+
+
 def evaluate(task: Task, cases: list[dict], provider: LLMProvider, log: bool = True) -> list[CaseResult]:
     results = []
     for case in cases:
         run = run_task(task, case["text"], provider)
         exact, within_one = score_case(case["expected"], run.output, task.ordinal_fields)
-        results.append(CaseResult(case["id"], case.get("lang", "?"), run.output, run.error,
-                                  exact, within_one, run.calls))
+        result = CaseResult(case["id"], case.get("lang", "?"), run.output, run.error,
+                            exact, within_one, run.calls, run.context_ids)
+        if task.kb_top_k > 0 and "relevant_kb" in case:
+            result.retrieval_hit = score_sources(case["relevant_kb"], run.context_ids)
+            cited = run.output.sources if run.output is not None else None
+            result.sources_correct = cited is not None and score_sources(case["relevant_kb"], cited)
+        results.append(result)
         if log:
             last = len(run.calls) - 1
             for attempt, response in enumerate(run.calls):
@@ -104,6 +122,10 @@ def summarize(results: list[CaseResult]) -> dict:
     summary = block(results)
     summary["by_lang"] = {lang: block([r for r in results if r.lang == lang])
                           for lang in sorted({r.lang for r in results})}
+    rated = [r for r in results if r.retrieval_hit is not None]
+    if rated:
+        summary["retrieval_hit"] = _rate([r.retrieval_hit for r in rated])
+        summary["sources_correct"] = _rate([r.sources_correct for r in rated])
     summary["repairs"] = sum(max(len(r.calls) - 1, 0) for r in results)
     summary["avg_input_tokens"] = sum(c.input_tokens for c in all_calls) / n
     summary["avg_output_tokens"] = sum(c.output_tokens for c in all_calls) / n
@@ -123,6 +145,9 @@ def format_summary(summary: dict) -> str:
         lines.append(f"  {name:<16} exakt: {pct(value)}")
     for name, value in summary["within_one"].items():
         lines.append(f"  {name:<16} max. 1 Stufe daneben: {pct(value)}")
+    if "retrieval_hit" in summary:
+        lines.append(f"  Wissensbasis: passende Notiz gefunden {pct(summary['retrieval_hit'])}, "
+                     f"Quellen richtig angegeben {pct(summary['sources_correct'])}")
     for lang, sub in summary["by_lang"].items():
         parts = ", ".join(f"{name} {pct(v)}" for name, v in sub["accuracy"].items())
         lines.append(f"  [{lang}] n={sub['n']}: {parts}")
@@ -138,10 +163,10 @@ def format_summary(summary: dict) -> str:
 def save_results(meta: dict, summaries: list[dict], runs: list[list[CaseResult]]) -> Path:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    path = RESULTS_DIR / f"{stamp}_{meta['task']}_{meta['prompt_version']}_{meta['provider']}.json"
+    path = RESULTS_DIR / f"{stamp}_{meta['task']}_{meta['provider']}.json"
     details = [
         {"run": i, "id": r.case_id, "lang": r.lang, "exact": r.exact, "within_one": r.within_one,
-         "error": r.error, "output": r.output.model_dump() if r.output is not None else None}
+         "context_ids": r.context_ids, "error": r.error, "output": r.output.model_dump() if r.output is not None else None}
         for i, results in enumerate(runs) for r in results
     ]
     data = {"meta": meta, "summaries": summaries, "cases": details}
@@ -154,7 +179,8 @@ def main(argv: list[str] | None = None) -> int:
     sys.stdout.reconfigure(encoding="utf-8")
 
     parser = argparse.ArgumentParser(prog="llmopsdesk-eval", description="Testsatz auswerten")
-    parser.add_argument("--task", choices=list(TASKS), default="ticket")
+    parser.add_argument("--task", choices=[*TASKS, "all"], default="ticket",
+                        help="Aufgabe bzw. Prompt-Variante; 'all' misst alle Varianten nacheinander")
     parser.add_argument("--provider", choices=PROVIDER_NAMES, default="mock")
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES, help="JSONL-Datei mit Testfällen")
     parser.add_argument("--repeat", type=int, default=1, help="Durchläufe (Modelle antworten nicht immer gleich)")
@@ -162,12 +188,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-save", action="store_true", help="Ergebnis nicht unter evals/results speichern")
     args = parser.parse_args(argv)
 
-    task = get_task(args.task)
+    # "ticket" ist nur ein zweiter Name für eine der Varianten, darum bei "all" weglassen.
+    tasks = [t for name, t in TASKS.items() if name != "ticket"] if args.task == "all" else [get_task(args.task)]
     cases = load_cases(args.cases)[: args.limit]
     provider = get_provider(args.provider)
-    reviewed = sum(1 for c in cases if c.get("reviewed"))
+    for task in tasks:
+        run_evaluation(task, cases, provider, args)
+    return 0
 
-    print(f"Aufgabe {task.name} (Prompt {task.prompt_version}), Provider {provider.name}, "
+
+def run_evaluation(task: Task, cases: list[dict], provider: LLMProvider, args: argparse.Namespace) -> None:
+    reviewed = sum(1 for c in cases if c.get("reviewed"))
+    print(f"\n=== Aufgabe {task.name} (Prompt {task.prompt_version}), Provider {provider.name}, "
           f"{len(cases)} Fälle, davon von einem Menschen geprüft: {reviewed}")
     if reviewed < len(cases):
         print("  Hinweis: Nicht alle Labels sind geprüft, die Ergebnisse sind vorläufig.")
@@ -195,7 +227,6 @@ def main(argv: list[str] | None = None) -> int:
             "n_cases": len(cases), "reviewed_cases": reviewed, "repeat": args.repeat,
         }
         print(f"\nGespeichert: {save_results(meta, summaries, runs)}")
-    return 0
 
 
 if __name__ == "__main__":

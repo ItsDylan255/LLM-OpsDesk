@@ -29,5 +29,8 @@ jobs:
       - name: Tests
         run: python -m pytest -v
 
-      - name: Auswertung mit dem Mock (prüft, dass die ganze Kette läuft)
-        run: llmopsdesk-eval --provider mock --no-save
+      - name: Auswertung aller Prompt-Varianten mit dem Mock (prüft, dass die ganze Kette läuft)
+        run: llmopsdesk-eval --provider mock --task all --no-save
+
+      - name: Suche in der Wissensbasis messen (ohne Modell, kostenlos)
+        run: llmopsdesk-retrieval

@@ -1,9 +1,10 @@
 """Führt eine Aufgabe mit einem Provider aus und prüft die Antwort.
 
 Ablauf:
-1. Prompt bauen und Modell aufrufen
-2. JSON aus der Antwort holen und mit Pydantic prüfen
-3. Ist die Antwort ungültig: höchstens MAX_REPAIRS-mal mit der Fehlermeldung nachfragen
+1. Falls die Aufgabe es verlangt: passende Notizen aus der Wissensbasis suchen (RAG)
+2. Prompt bauen und Modell aufrufen
+3. JSON aus der Antwort holen und mit Pydantic prüfen
+4. Ist die Antwort ungültig: höchstens MAX_REPAIRS-mal mit der Fehlermeldung nachfragen
 """
 
 import json
@@ -13,6 +14,7 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel, ValidationError
 
 from .providers.base import LLMProvider, LLMResponse
+from .retrieval import BM25Retriever, get_retriever
 from .tasks.base import Task
 
 # Ein Reparaturversuch reicht meistens. Mehr Versuche kosten mehr Tokens und
@@ -25,6 +27,7 @@ class RunResult:
     output: BaseModel | None  # die geprüfte Antwort, oder None bei Misserfolg
     error: str | None         # Fehlermeldung des letzten Versuchs, oder None
     calls: list[LLMResponse] = field(default_factory=list)  # alle Modellaufrufe
+    context_ids: list[str] = field(default_factory=list)    # mitgeschickte Notizen (RAG)
 
     @property
     def repairs_used(self) -> int:
@@ -58,9 +61,18 @@ def build_repair_prompt(user_prompt: str, bad_answer: str, error: str) -> str:
     )
 
 
-def run_task(task: Task, input_text: str, provider: LLMProvider) -> RunResult:
-    user_prompt = task.build_user_prompt(input_text)
+def run_task(
+    task: Task, input_text: str, provider: LLMProvider, retriever: BM25Retriever | None = None
+) -> RunResult:
     result = RunResult(output=None, error=None)
+
+    documents = []
+    if task.kb_top_k > 0:
+        retriever = retriever or get_retriever()  # Tests können eine eigene Wissensbasis übergeben
+        documents = [doc for doc, _score in retriever.search(input_text, task.kb_top_k)]
+        result.context_ids = [doc.id for doc in documents]
+
+    user_prompt = task.build_user_prompt(input_text, documents)
 
     prompt = user_prompt
     for _attempt in range(1 + MAX_REPAIRS):

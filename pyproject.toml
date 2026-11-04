@@ -24,6 +24,8 @@ dev = ["pytest"]
 [project.scripts]
 llmopsdesk = "llmopsdesk.cli:main"
 llmopsdesk-eval = "llmopsdesk.evaluation:main"
+llmopsdesk-compare = "llmopsdesk.compare:main"
+llmopsdesk-retrieval = "llmopsdesk.retrieval:main"
 
 # src-Layout: der Code liegt in src/llmopsdesk
 [tool.setuptools.packages.find]

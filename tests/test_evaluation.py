@@ -3,7 +3,10 @@ import json
 from llmopsdesk import evaluation
 from llmopsdesk.evaluation import evaluate, load_cases, score_case, summarize
 from llmopsdesk.providers.mock import MockProvider
-from llmopsdesk.tasks.ticket import TICKET_TASK, TicketAnalysis
+from llmopsdesk.tasks import get_task
+from llmopsdesk.tasks.ticket import TicketAnalysis
+
+TICKET_TASK = get_task("ticket")
 
 ORDER = {"priority": ["low", "medium", "high", "critical"]}
 

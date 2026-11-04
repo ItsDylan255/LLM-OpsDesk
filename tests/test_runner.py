@@ -1,6 +1,8 @@
 from llmopsdesk.providers.mock import DEFAULT_RESPONSE, MockProvider
 from llmopsdesk.runner import MAX_REPAIRS, extract_json, run_task
-from llmopsdesk.tasks.ticket import TICKET_TASK
+from llmopsdesk.tasks import get_task
+
+TICKET_TASK = get_task("ticket")
 
 
 def test_valid_answer_needs_no_repair():
